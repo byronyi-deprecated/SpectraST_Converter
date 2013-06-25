@@ -93,6 +93,7 @@ for line in file:
 	line = tuple(line[:-1])
 	Entry.append(line)
 
+c.execute("CREATE INDEX Mz_idx on Library (Mz);")
 c.close()
 con.commit()
 
