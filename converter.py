@@ -21,14 +21,14 @@ assert len(sys.argv) == 4
 
 txtFileName = parseArgv(sys.argv[1], 'sptxt')
 dbFilename = parseArgv(sys.argv[2], 'db')
-NumPeak = int(sys.argv[3])
-assert NumPeak > 0
+MaxNumPeak = int(sys.argv[3])
+assert MaxNumPeak > 0
 
 con = sqlite3.connect(dbFilename)
 c = con.cursor()
 
-sql_stmt = 'CREATE TABLE Library (PeptideName text, Mz real, Mw real, Charge integer, '
-for i in range(NumPeak):
+sql_stmt = 'CREATE TABLE Library (PeptideName text, Mz real, Mw real, Charge integer, NumPeak integer, '
+for i in range(MaxNumPeak):
         word = 'Mz' + str(i+1) + ' real, '
         word = word + 'Intensity' + str(i+1) + ' real, '
         word = word + 'Annotation' + str(i+1) + ' text, '
@@ -37,8 +37,8 @@ for i in range(NumPeak):
 sql_stmt = sql_stmt[:-2] + ');'
 c.execute(sql_stmt)
 
-sql_stmt = 'INSERT INTO Library VALUES (?, ?, ?, ?, '
-for i in range(NumPeak):
+sql_stmt = 'INSERT INTO Library VALUES (?, ?, ?, ?, ?, '
+for i in range(MaxNumPeak):
     sql_stmt = sql_stmt + '?, ?, ?, '
 sql_stmt = sql_stmt[:-2] + ');'
 
@@ -59,11 +59,12 @@ for line in file:
 	if readingLine:		
 		readingLine = False
 		Entry.sort(key = tupleKey, reverse = True)
-		if len(Entry) > NumPeak:
-			Entry = Entry[:NumPeak]
+		if len(Entry) > MaxNumPeak:
+			Entry = Entry[:MaxNumPeak]
+		Peaklist.append(len(Entry))
 		for entry in Entry:
 		    Peaklist.extend(list(entry))
-		extend = 3 * NumPeak + 4 - len(Peaklist)
+		extend = 3 * MaxNumPeak + 5 - len(Peaklist)
 		for i in range(extend):
 			Peaklist.append(None)
 		c.execute(sql_stmt, tuple(Peaklist))
