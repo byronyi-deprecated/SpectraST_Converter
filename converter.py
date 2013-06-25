@@ -27,7 +27,7 @@ assert MaxNumPeak > 0
 con = sqlite3.connect(dbFilename)
 c = con.cursor()
 
-sql_stmt = 'CREATE TABLE Library (PeptideName text, Mz real, Mw real, Charge integer, NumPeak integer, '
+sql_stmt = 'CREATE TABLE Library (PeptideName text, Mz real, Charge integer, NumPeak integer, '
 for i in range(MaxNumPeak):
         word = 'Mz' + str(i+1) + ' real, '
         word = word + 'Intensity' + str(i+1) + ' real, '
@@ -37,14 +37,13 @@ for i in range(MaxNumPeak):
 sql_stmt = sql_stmt[:-2] + ');'
 c.execute(sql_stmt)
 
-sql_stmt = 'INSERT INTO Library VALUES (?, ?, ?, ?, ?, '
+sql_stmt = 'INSERT INTO Library VALUES (?, ?, ?, ?, '
 for i in range(MaxNumPeak):
     sql_stmt = sql_stmt + '?, ?, ?, '
 sql_stmt = sql_stmt[:-2] + ');'
 
 file = open(txtFileName)
 name = ''
-mw = 0.0
 mz = 0.0
 charge = 0
 
@@ -64,7 +63,7 @@ for line in file:
 		Peaklist.append(len(Entry))
 		for entry in Entry:
 		    Peaklist.extend(list(entry))
-		extend = 3 * MaxNumPeak + 5 - len(Peaklist)
+		extend = 3 * MaxNumPeak + 4 - len(Peaklist)
 		for i in range(extend):
 			Peaklist.append(None)
 		c.execute(sql_stmt, tuple(Peaklist))
@@ -76,10 +75,6 @@ for line in file:
         charge = int(charge)
         Peaklist.append(name);
         Peaklist.append(charge);
-    elif line.startswith('MW: '):
-        mw = line[len('MW: '):]
-        mw = float(mw)
-        Peaklist.append(mw)
     elif line.startswith('PrecursorMZ:'):
         mz = line[len('PrecursorMZ: '):]
         mz = float(mz)
