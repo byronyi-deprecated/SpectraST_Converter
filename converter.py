@@ -3,93 +3,83 @@ __author__ = 'byronyi'
 import sys
 import sqlite3
 
+
 def parseArgv(fileName, extension='db'):
     """parse arguments list from command line arguments
+    :rtype : string fileName
     seek for .db file"""
 
     assert '.' in fileName
     ext = fileName.split('.')
-    assert len(ext) == 2
-    ext = ext[1]
+    ext = ext[-1]
     assert ext == extension
     return fileName
 
+
 def tupleKey(t):
-	return t[1]
+    return t[1]
 
-assert len(sys.argv) == 4
 
+assert len(sys.argv) == 3
 txtFileName = parseArgv(sys.argv[1], 'sptxt')
 dbFilename = parseArgv(sys.argv[2], 'db')
-MaxNumPeak = int(sys.argv[3])
-assert MaxNumPeak > 0
 
 con = sqlite3.connect(dbFilename)
 c = con.cursor()
 
-sql_stmt = 'CREATE TABLE Library (PeptideName text, Mz real, Charge integer, NumPeak integer, '
-for i in range(MaxNumPeak):
-        word = 'Mz' + str(i+1) + ' real, '
-        word = word + 'Intensity' + str(i+1) + ' real, '
-        word = word + 'Annotation' + str(i+1) + ' text, '
-        sql_stmt = sql_stmt + word
-        word = ''
-sql_stmt = sql_stmt[:-2] + ');'
-c.execute(sql_stmt)
+peptide_stmt = 'CREATE TABLE Peptide (LibId integer, PeptideName text, Charge integer, PrecursorMz real, Comment text, NumPeak integer)'
+c.execute(peptide_stmt)
 
-sql_stmt = 'INSERT INTO Library VALUES (?, ?, ?, ?, '
-for i in range(MaxNumPeak):
-    sql_stmt = sql_stmt + '?, ?, ?, '
-sql_stmt = sql_stmt[:-2] + ');'
+peaklist_stmt = 'CREATE TABLE Peaklist (LibID int, Mz real, Intensity real, Annotation text, IntensityRank integer)'
+c.execute(peaklist_stmt)
+
+peptide_stmt = 'INSERT INTO Peptide VALUES (?, ?, ?, ?, ?, ?)'
+peaklist_stmt = 'INSERT INTO Peaklist VALUES (?, ?, ?, ?, ?)'
 
 file = open(txtFileName)
 name = ''
-mz = 0.0
 charge = 0
-
-Peaklist = []
-readingLine = False
-Entry = []
+id = 0
+mz = 0.0
+comment = ''
+numPeaks = 0
+peaklist = []
 
 for line in file:
     line = line.strip()
     if line.startswith('Name: '):
-
-	if readingLine:		
-		readingLine = False
-		Entry.sort(key = tupleKey, reverse = True)
-		if len(Entry) > MaxNumPeak:
-			Entry = Entry[:MaxNumPeak]
-		Peaklist.append(len(Entry))
-		for entry in Entry:
-		    Peaklist.extend(list(entry))
-		extend = 3 * MaxNumPeak + 4 - len(Peaklist)
-		for i in range(extend):
-			Peaklist.append(None)
-		c.execute(sql_stmt, tuple(Peaklist))
-		Peaklist = []
-		Entry = []
-
         name = line[len('Name: '):]
         charge = line[-1:]
         charge = int(charge)
-        Peaklist.append(name);
-        Peaklist.append(charge);
+    elif line.startswith('LibID: '):
+        id = line[len('LibID: '):]
+        id = int(id)
     elif line.startswith('PrecursorMZ:'):
-        mz = line[len('PrecursorMZ: '):]
-        mz = float(mz)
-        Peaklist.append(mz)
+        precursormz = line[len('PrecursorMZ: '):]
+        precursormz = float(mz)
+    elif line.startswith('Comment:'):
+        comment = line[len('Comment: '):]        
     elif line.startswith('NumPeaks:'):
-        readingLine = True
-    elif readingLine and len(line.split('\t')) == 4:
+        numPeaks = line[len('NumPeaks: '):]
+        numPeaks = int(numPeaks)
+    elif len(line.split('\t')) >= 3:
         line = line.split('\t')
-	line[0] = float(line[0])
-	line[1] = float(line[1])
-	line = tuple(line[:-1])
-	Entry.append(line)
+        mz = float(line[0])
+        intensity = float(line[1])	
+	peak = (mz, intensity, line[2])
+	peaklist.append(peak)
+    elif line == '':
+	peaklist.sort(key = tupleKey, reverse = True)
+	for i in range(len(peaklist)):
+		peak = (id,) + peaklist[i] + (i+1,)
+		c.execute(peaklist_stmt, peak)
 
-c.execute("CREATE INDEX Mz_idx on Library (Mz);")
+	peaklist = []
+        entry = (id, name, charge, mz, comment, numPeaks)
+        c.execute(peptide_stmt, entry)
+
+c.execute("CREATE INDEX Mz_idx on Peptide (PrecursorMz);")
+c.execute("CREATE INDEX IntensityRank_idx on Peaklist (LibID, IntensityRank)")
+
 c.close()
 con.commit()
-
-
