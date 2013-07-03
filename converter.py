@@ -56,7 +56,7 @@ for line in file:
         id = int(id)
     elif line.startswith('PrecursorMZ:'):
         precursormz = line[len('PrecursorMZ: '):]
-        precursormz = float(mz)
+        precursormz = float(precursormz)
     elif line.startswith('Comment:'):
         comment = line[len('Comment: '):]        
     elif line.startswith('NumPeaks:'):
@@ -75,11 +75,16 @@ for line in file:
 		c.execute(peaklist_stmt, peak)
 
 	peaklist = []
-        entry = (id, name, charge, mz, comment, numPeaks)
+        entry = (id, name, charge, precursormz, comment, numPeaks)
         c.execute(peptide_stmt, entry)
 
 c.execute("CREATE INDEX Mz_idx on Peptide (PrecursorMz);")
 c.execute("CREATE INDEX IntensityRank_idx on Peaklist (LibID, IntensityRank)")
+c.execute("CREATE VIEW Peaklist_50 as SELECT LibID, Mz, Intensity, Annotation FROM Peaklist WHERE IntensityRank <= 50")
+c.execute("CREATE VIEW Peaklist_75 as SELECT LibID, Mz, Intensity, Annotation FROM Peaklist WHERE IntensityRank <= 75")
+c.execute("CREATE VIEW Peaklist_100 as SELECT LibID, Mz, Intensity, Annotation FROM Peaklist WHERE IntensityRank <= 100")
+c.execute("CREATE VIEW Peaklist_150 as SELECT LibID, Mz, Intensity, Annotation FROM Peaklist WHERE IntensityRank <= 150")
+
 
 c.close()
 con.commit()
